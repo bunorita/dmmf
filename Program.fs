@@ -2,11 +2,21 @@
 
 type CustomerId = CustomerId of int
 type OrderId = OrderId of int
+type ProductId = ProductId of string
 
 type CustomerInfo = Undefined
 type ShippingAddress = Undefined
 type BillingAddress = Undefined
-type OrderLine = Undefined
+
+[<NoEquality; NoComparison>]
+type OrderLine =
+    { OrderId: OrderId
+      ProductId: ProductId
+      Qty: int }
+
+    member this.Key = (this.OrderId, this.ProductId)
+
+
 type BillingAmount = Undefined
 
 type Order =
@@ -70,4 +80,10 @@ type Contact =
       PhoneNumber: PhoneNumber
       EmailAddress: EmailAddress }
 
-printfn "Hello %s" "DMMF"
+
+let line1 =
+    { OrderId = OrderId 1
+      ProductId = ProductId "abc"
+      Qty = 100 }
+
+printfn $"{line1.Key}"

@@ -60,4 +60,14 @@ type PersonalName =
       MiddleInitial: string option
       LastName: string }
 
+type ContactId = ContactId of int
+type PhoneNumber = PhoneNumber of string
+type EmailAddress = EmailAddress of string
+
+[<NoEquality; NoComparison>]
+type Contact =
+    { ContactId: ContactId
+      PhoneNumber: PhoneNumber
+      EmailAddress: EmailAddress }
+
 printfn "Hello %s" "DMMF"

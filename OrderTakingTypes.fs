@@ -15,8 +15,8 @@ type ProductCode =
 
 
 // Order Quantity related
-type UnitQuantity = UnitQuantity of int
-type KilogramQuantity = KilogramQuantity of decimal
+type UnitQuantity = private UnitQuantity of int // between 1 and 1000
+type KilogramQuantity = private KilogramQuantity of decimal // between 0.05 and 100.00
 
 type OrderQuantity =
     | Unit of UnitQuantity
@@ -103,3 +103,14 @@ type Contact =
     { ContactId: ContactId
       PhoneNumber: PhoneNumber
       EmailAddress: EmailAddress }
+
+module UnitQuantity =
+    let create qty =
+        if qty < 1 then
+            Error "UnitQuantity can not be negative"
+        else if qty > 1000 then
+            Error "UnitQuantity can not be more than 1000"
+        else
+            Ok(UnitQuantity qty)
+
+    let value (UnitQuantity qty) = qty

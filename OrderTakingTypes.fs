@@ -2,6 +2,8 @@ namespace OrderTaking.Domain
 
 type Undefined = exn
 
+type NonEmptyList<'a> = { First: 'a; Rest: 'a list }
+
 // units of measure
 [<Measure>]
 type kg
@@ -45,7 +47,7 @@ type Order =
       CustomerId: CustomerId
       ShippingAddress: ShippingAddress
       BillingAddress: BillingAddress
-      OrderLines: OrderLine list
+      OrderLines: NonEmptyList<OrderLine>
       AmountToBill: BillingAmount }
 
 and OrderLine =
@@ -104,12 +106,31 @@ type PersonalName =
 type ContactId = ContactId of int
 type PhoneNumber = PhoneNumber of string
 type EmailAddress = EmailAddress of string
+type VerifiedEmailAddress = private VerifiedEmailAddress of string
+// only verification service create VerifiedEmailAddress
+
+type CustomerEmail =
+    | Unverified of EmailAddress
+    | Verified of VerifiedEmailAddress
+
+type EmailContactInfo = Undefined
+type PostalContactInfo = Undefined
+
+type ContactInfo =
+    | EmailOnly of EmailContactInfo
+    | AddrOnly of PostalContactInfo
+    | EmailAndAddr of BothContactMethods
+
+and BothContactMethods =
+    { Email: EmailContactInfo
+      Address: PostalContactInfo }
+
+type Name = Undefined
 
 [<NoEquality; NoComparison>]
 type Contact =
-    { ContactId: ContactId
-      PhoneNumber: PhoneNumber
-      EmailAddress: EmailAddress }
+    { Name: Name; ContactInfo: ContactInfo }
+
 
 module UnitQuantity =
     let create qty =

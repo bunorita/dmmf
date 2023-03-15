@@ -2,6 +2,12 @@
 
 [<EntryPoint>]
 let main argv =
+    let fiveKilos = 5.0<kg>
+    let fiveMeters = 5.0<m>
+    // let listOfWeights = [ fiveKilos; fiveMeters ]
+    // printfn "%b" (fiveKilos = fiveMeters)
+
+
     let result = UnitQuantity.create 100
 
     match result with

@@ -2,6 +2,13 @@ namespace OrderTaking.Domain
 
 type Undefined = exn
 
+// units of measure
+[<Measure>]
+type kg
+
+[<Measure>]
+type m
+
 // Product code related
 type WidgetCode = WidgetCode of string
 // constraint: starting with "W" and 4 digits
@@ -16,7 +23,7 @@ type ProductCode =
 
 // Order Quantity related
 type UnitQuantity = private UnitQuantity of int // between 1 and 1000
-type KilogramQuantity = private KilogramQuantity of decimal // between 0.05 and 100.00
+type KilogramQuantity = private KilogramQuantity of decimal<kg> // between 0.05 and 100.00
 
 type OrderQuantity =
     | Unit of UnitQuantity
@@ -114,3 +121,14 @@ module UnitQuantity =
             Ok(UnitQuantity qty)
 
     let value (UnitQuantity qty) = qty
+
+module KilogramQuantity =
+    let create qty =
+        if qty < 0.05m<kg> then
+            Error "KilogramQuantity can not be less than 0.05kg"
+        else if qty > 100.00m<kg> then
+            Error "KilogramQuantity can not be more than 100.00kg"
+        else
+            Ok(KilogramQuantity qty)
+
+    let value (KilogramQuantity qty) = qty

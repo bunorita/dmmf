@@ -6,8 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="OrderTakingTypes.fs" />
-    <Compile Include="Program.fs" />
+    <Compile Include="BaseTypes.fs" />
+    <Compile Include="DomainApi.fs" />
+    <Compile Include="PlaceOrderWorkflow.fs" />
+    <Compile Include="Main.fs" />
   </ItemGroup>
 
 </Project>

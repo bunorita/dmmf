@@ -22,17 +22,19 @@ type ValidatedOrder =
 
 
 // priced state
-type PricedOrderLine = Undefined
+type PricedOrderLine =
+    { OrderLineId: OrderLineId
+      ProductCode: ProductCode
+      Quantity: OrderQuantity
+      LinePrice: Price }
 
 type PricedOrder =
-    { OrderId: string
+    { OrderId: OrderId
       CustomerInfo: CustomerInfo
       ShippingAddress: Address
       BillingAddress: Address
       OrderLines: PricedOrderLine list
       AmmountToBill: BillingAmount }
-
-and BillingAmount = Undefined
 
 // all states combined
 type Order =
@@ -133,4 +135,31 @@ type PricingError = PricingError of string
 type PriceOrder =
     GetProductPrice // dependency
         -> ValidatedOrder // input
-        -> Result<PricedOrder, PricingError> // output
+        -> PricedOrder // output: without effects for now
+// -> Result<PricedOrder, PricingError> // output
+
+let toPricedOrderLine getProductPrice (line: ValidatedOrderLine) : PricedOrderLine =
+    let qty = line.Quantity |> OrderQuantity.value
+    let price = line.ProductCode |> getProductPrice
+    let linePrice = price |> Price.multipy qty
+
+    { OrderLineId = line.OrderLineId
+      ProductCode = line.ProductCode
+      Quantity = line.Quantity
+      LinePrice = linePrice }
+
+
+let priceOrder: PriceOrder =
+    fun getProductPrice validatedOrder ->
+        let lines =
+            validatedOrder.OrderLines |> List.map (toPricedOrderLine getProductPrice)
+
+        let amountToBill =
+            lines |> List.map (fun line -> line.LinePrice) |> BillingAmount.sumPrices
+
+        { OrderId = validatedOrder.OrderId
+          CustomerInfo = validatedOrder.CustomerInfo
+          ShippingAddress = validatedOrder.ShippingAddress
+          BillingAddress = validatedOrder.BillingAddress
+          OrderLines = lines
+          AmmountToBill = amountToBill }

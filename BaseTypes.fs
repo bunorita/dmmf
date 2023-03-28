@@ -53,8 +53,8 @@ type OrderLineId = private OrderLineId of string
 type CustomerId = Undefined
 type ShippingAddress = Undefined
 type BillingAddress = Undefined
-type Price = Undefined
-type BillingAmount = Undefined
+type Price = private Price of decimal
+type BillingAmount = private BillingAmount of decimal
 
 and OrderLine =
     { Id: OrderLineId
@@ -251,3 +251,22 @@ module KilogramQuantity =
             KilogramQuantity qty
 
     let value (KilogramQuantity qty) = qty
+
+module Price =
+    let create v = Price v
+    let value (Price v) = v
+
+    let multipy qty (Price p) = qty * p |> create
+
+module BillingAmount =
+    let create amount = BillingAmount amount
+
+    let sumPrices prices =
+        let total = prices |> List.map Price.value |> List.sum
+        create total
+
+module OrderQuantity =
+    let value qty =
+        match qty with
+        | Unit uq -> uq |> UnitQuantity.value |> decimal
+        | Kilogram kgq -> kgq |> KilogramQuantity.value |> decimal

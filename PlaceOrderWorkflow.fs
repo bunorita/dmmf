@@ -128,6 +128,7 @@ let validateOrder: ValidateOrder =
           BillingAddress = billingAddr
           OrderLines = orderLines }
 
+
 // ----- Price order
 type GetProductPrice = ProductCode -> Price
 type PricingError = PricingError of string
@@ -163,3 +164,42 @@ let priceOrder: PriceOrder =
           BillingAddress = validatedOrder.BillingAddress
           OrderLines = lines
           AmmountToBill = amountToBill }
+
+
+// ----- Acknowledge order
+type HtmlString = HtmlString of string
+type CreateOrderAcknowledgementLetter = PricedOrder -> HtmlString
+
+type OrderAcknowledgement =
+    { EmailAddress: EmailAddress
+      Letter: HtmlString }
+
+type SendResult =
+    | Sent
+    | NotSent
+
+// type SendOrderAknowledgement = OrderAcknowledgement -> Async<SendResult>
+type SendOrderAknowledgement = OrderAcknowledgement -> SendResult // without effects for now
+
+type AcknowledgmentOrder =
+    CreateOrderAcknowledgementLetter // dependency
+        -> SendOrderAknowledgement // dependency
+        -> PricedOrder // input
+        -> OrderAcknowledgementSent option // output
+
+let acknowledgmentOrder: AcknowledgmentOrder =
+    fun createAcknowledgementLetter sendAknowledgement pricedOrder ->
+        let letter = createAcknowledgementLetter pricedOrder
+
+        let acknowledge =
+            { EmailAddress = pricedOrder.CustomerInfo.EmailAddress
+              Letter = letter }
+
+        match sendAknowledgement acknowledge with
+        | Sent ->
+            let event =
+                { OrderId = pricedOrder.OrderId
+                  EmailAddress = pricedOrder.CustomerInfo.EmailAddress }
+
+            Some event
+        | NotSent -> None

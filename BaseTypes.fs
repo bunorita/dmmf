@@ -89,7 +89,7 @@ type CustomerInfo =
 
 type VerifiedEmailAddress = private VerifiedEmailAddress of string
 
-type HtmlString = HtmlString of string
+
 
 
 
@@ -118,25 +118,6 @@ type CategolizeInboundMail = EnvelopeContents -> CategolizedMail
 type ProductCatalog = Undefined
 // type CalculatePrices = OrderForm -> ProductCatalog -> PricedOrder
 
-
-
-
-
-type OrderAcknowledgement =
-    { EmailAddress: EmailAddress
-      Letter: HtmlString }
-
-// type CreateOrderAcknowledgementLetter = PricedOrder -> HtmlString
-
-
-type SendResult =
-    | Sent
-    | NotSent
-
-type SendOrderAknowledgement = OrderAcknowledgement -> Async<SendResult>
-
-// type AcknowledgmentOrder =
-// CreateOrderAcknowledgementLetter -> SendOrderAknowledgement -> PricedOrder -> Async<OrderAcknowledgementSent option>
 
 // only verification service create VerifiedEmailAddress
 

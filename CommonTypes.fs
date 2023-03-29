@@ -1,4 +1,4 @@
-namespace OrderTaking.Base
+namespace OrderTaking.Common
 
 open System
 

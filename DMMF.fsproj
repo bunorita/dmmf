@@ -6,9 +6,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="BaseTypes.fs" />
-    <Compile Include="DomainApi.fs" />
-    <Compile Include="PlaceOrderWorkflow.fs" />
+    <Compile Include="CommonTypes.fs" />
+    <Compile Include="PlaceOrder.PublicTypes.fs" />
+    <Compile Include="PlaceOrder.Implementation.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
 

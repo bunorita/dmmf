@@ -1,4 +1,4 @@
-﻿open OrderTaking.Base
+﻿open OrderTaking.Common
 
 [<EntryPoint>]
 let main argv =

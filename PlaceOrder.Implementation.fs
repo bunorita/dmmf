@@ -1,13 +1,25 @@
-module internal OrderTaking.Domain.Implementation
+module internal OrderTaking.PlaceOrder.Implementation
 
-open OrderTaking.Base
+open OrderTaking.Common
 
 
-// ---------------------
-// Order lifecycle
-// ---------------------
+// -----------------------------------------------------------------
+// Type definition of each steps
+//   * Validation
+//   * Pricing
+//   * Sending OrderAcknowledgement
+//   * Creating events
+// -----------------------------------------------------------------
 
-// validated state
+// ---------------------------------
+// Validation step
+// ---------------------------------
+type CheckProductCodeExists = ProductCode -> bool
+type AddressValidationError = AddressValidationError of string
+type CheckedAddress = CheckedAddress of UnvalidatedAddress
+// type CheckAddressExists = UnvalidatedAddress -> AsyncResult<CheckedAddress, AddressValidationError>
+type CheckAddressExists = UnvalidatedAddress -> CheckedAddress // without effects for now
+
 type ValidatedOrderLine =
     { OrderLineId: OrderLineId
       ProductCode: ProductCode
@@ -20,26 +32,6 @@ type ValidatedOrder =
       BillingAddress: Address
       OrderLines: ValidatedOrderLine list }
 
-// priced state
-
-// all states combined
-type Order =
-    | Unvalidated of UnvalidatedOrder
-    | Validated of ValidatedOrder
-    | Priced of PricedOrder
-
-
-// -----------
-// Internal steps
-// -----------
-
-// ----- Validate order
-type CheckProductCodeExists = ProductCode -> bool
-type AddressValidationError = AddressValidationError of string
-type CheckedAddress = CheckedAddress of UnvalidatedAddress
-// type CheckAddressExists = UnvalidatedAddress -> AsyncResult<CheckedAddress, AddressValidationError>
-type CheckAddressExists = UnvalidatedAddress -> CheckedAddress // without effects for now
-
 type ValidateOrder =
     CheckProductCodeExists // dependency
         -> CheckAddressExists // dependency
@@ -47,7 +39,58 @@ type ValidateOrder =
         // -> AsyncResult<ValidatedOrder, ValidationError list> // output
         -> ValidatedOrder // output, without effects
 
-let toCustomerInfo (customer: UnvalidatedCustomerInfo) : CustomerInfo =
+// ---------------------------------
+//  Pricing step
+// ---------------------------------
+type GetProductPrice = ProductCode -> Price
+type PricingError = PricingError of string
+
+type PriceOrder =
+    GetProductPrice // dependency
+        -> ValidatedOrder // input
+        -> PricedOrder // output: without effects for now
+// -> Result<PricedOrder, PricingError> // output
+
+// ---------------------------------
+//  Send acknowledgement
+// ---------------------------------
+type HtmlString = HtmlString of string
+
+type OrderAcknowledgement =
+    { EmailAddress: EmailAddress
+      Letter: HtmlString }
+
+type CreateOrderAcknowledgementLetter = PricedOrder -> HtmlString
+
+type SendResult =
+    | Sent
+    | NotSent
+// type SendOrderAknowledgement = OrderAcknowledgement -> Async<SendResult>
+type SendOrderAknowledgement = OrderAcknowledgement -> SendResult // without effects for now
+
+type AcknowledgmentOrder =
+    CreateOrderAcknowledgementLetter // dependency
+        -> SendOrderAknowledgement // dependency
+        -> PricedOrder // input
+        -> OrderAcknowledgementSent option // output
+
+// ---------------------------------
+//  Create events
+// ---------------------------------
+type CreateEvents =
+    PricedOrder // input
+        -> OrderAcknowledgementSent option // input (event from previous step)
+        -> PlaceOrderEvent list //outputs
+
+
+// -----------------------------------------------------------------
+// Implementation
+// -----------------------------------------------------------------
+
+// ---------------------------------
+// Validation step
+// ---------------------------------
+let toCustomerInfo (customer: UnvalidatedCustomerInfo) =
     { Name =
         { FirstName = customer.FirstName |> String50.create
           LastName = customer.LastName |> String50.create }
@@ -115,16 +158,9 @@ let validateOrder: ValidateOrder =
           OrderLines = orderLines }
 
 
-// ----- Price order
-type GetProductPrice = ProductCode -> Price
-type PricingError = PricingError of string
-
-type PriceOrder =
-    GetProductPrice // dependency
-        -> ValidatedOrder // input
-        -> PricedOrder // output: without effects for now
-// -> Result<PricedOrder, PricingError> // output
-
+// ---------------------------------
+//  Pricing step
+// ---------------------------------
 let toPricedOrderLine getProductPrice (line: ValidatedOrderLine) : PricedOrderLine =
     let qty = line.Quantity |> OrderQuantity.value
     let price = line.ProductCode |> getProductPrice
@@ -152,27 +188,9 @@ let priceOrder: PriceOrder =
           AmmountToBill = amountToBill }
 
 
-// ----- Acknowledge order
-type HtmlString = HtmlString of string
-type CreateOrderAcknowledgementLetter = PricedOrder -> HtmlString
-
-type OrderAcknowledgement =
-    { EmailAddress: EmailAddress
-      Letter: HtmlString }
-
-type SendResult =
-    | Sent
-    | NotSent
-
-// type SendOrderAknowledgement = OrderAcknowledgement -> Async<SendResult>
-type SendOrderAknowledgement = OrderAcknowledgement -> SendResult // without effects for now
-
-type AcknowledgmentOrder =
-    CreateOrderAcknowledgementLetter // dependency
-        -> SendOrderAknowledgement // dependency
-        -> PricedOrder // input
-        -> OrderAcknowledgementSent option // output
-
+// ---------------------------------
+//  Send acknowledgement
+// ---------------------------------
 let acknowledgmentOrder: AcknowledgmentOrder =
     fun createAcknowledgementLetter sendAknowledgement pricedOrder ->
         let letter = createAcknowledgementLetter pricedOrder
@@ -190,15 +208,9 @@ let acknowledgmentOrder: AcknowledgmentOrder =
             Some event
         | NotSent -> None
 
-
-// ---------------
-// Create events
-// ---------------
-type CreateEvents =
-    PricedOrder // input
-        -> OrderAcknowledgementSent option // input (event from previous step)
-        -> PlaceOrderEvent list //output
-
+// ---------------------------------
+//  Create events
+// ---------------------------------
 let createBillingEvent (placedOrder: PricedOrder) : BillableOrderPlaced option =
     let billingAmount = placedOrder.AmmountToBill |> BillingAmount.value
 

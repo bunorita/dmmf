@@ -89,21 +89,9 @@ type CustomerInfo =
 
 type VerifiedEmailAddress = private VerifiedEmailAddress of string
 
-
-
-
-
 type ValidationError =
     { FieldName: string
       ErrorDescription: string }
-
-
-
-// | other errors
-
-// type CreateEvents = PricedOrder -> PlaceOrderEvent list
-
-
 
 type QuoteForm = Undefined
 type OrderForm = Undefined
@@ -241,6 +229,7 @@ module Price =
 
 module BillingAmount =
     let create amount = BillingAmount amount
+    let value (BillingAmount v) = v
 
     let sumPrices prices =
         let total = prices |> List.map Price.value |> List.sum

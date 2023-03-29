@@ -44,12 +44,30 @@ type PlaceOrderCommand = Command<UnvalidatedOrder>
 // Public API
 // ----
 // Success output of PlaceOrder workflow
-type OrderPlaced = PricedOrder // for shipping
 
+// Event to send to shipping context
+type PricedOrderLine =
+    { OrderLineId: OrderLineId
+      ProductCode: ProductCode
+      Quantity: OrderQuantity
+      LinePrice: Price }
+
+type PricedOrder =
+    { OrderId: OrderId
+      CustomerInfo: CustomerInfo
+      ShippingAddress: Address
+      BillingAddress: Address
+      OrderLines: PricedOrderLine list
+      AmmountToBill: BillingAmount }
+
+type OrderPlaced = PricedOrder
+
+// Event to send to billing context
+// This will only be created if the AmountToBill is not zero.
 type BillableOrderPlaced =
     { OrderId: OrderId
       BillingAddress: Address
-      AmmountToBill: BillingAmount } // for billing
+      AmmountToBill: BillingAmount }
 
 type OrderAcknowledgementSent =
     { OrderId: OrderId
@@ -57,8 +75,8 @@ type OrderAcknowledgementSent =
 
 type PlaceOrderEvent =
     | OrderPlaced of OrderPlaced
-    | BillableOrderPlaced of BillableOrderPlaced
     | AcknowledgmentSent of OrderAcknowledgementSent
+    | BillableOrderPlaced of BillableOrderPlaced
 // Failure output of PlaceOrder workflow
 type PlaceOrderError = ValidationError of ValidationError list
 

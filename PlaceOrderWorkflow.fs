@@ -20,21 +20,7 @@ type ValidatedOrder =
       BillingAddress: Address
       OrderLines: ValidatedOrderLine list }
 
-
 // priced state
-type PricedOrderLine =
-    { OrderLineId: OrderLineId
-      ProductCode: ProductCode
-      Quantity: OrderQuantity
-      LinePrice: Price }
-
-type PricedOrder =
-    { OrderId: OrderId
-      CustomerInfo: CustomerInfo
-      ShippingAddress: Address
-      BillingAddress: Address
-      OrderLines: PricedOrderLine list
-      AmmountToBill: BillingAmount }
 
 // all states combined
 type Order =
@@ -203,3 +189,49 @@ let acknowledgmentOrder: AcknowledgmentOrder =
 
             Some event
         | NotSent -> None
+
+
+// ---------------
+// Create events
+// ---------------
+type CreateEvents =
+    PricedOrder // input
+        -> OrderAcknowledgementSent option // input (event from previous step)
+        -> PlaceOrderEvent list //output
+
+let createBillingEvent (placedOrder: PricedOrder) : BillableOrderPlaced option =
+    let billingAmount = placedOrder.AmmountToBill |> BillingAmount.value
+
+    if billingAmount > 0M then
+        let order =
+            { OrderId = placedOrder.OrderId
+              BillingAddress = placedOrder.BillingAddress
+              AmmountToBill = placedOrder.AmmountToBill }
+
+        Some order
+    else
+        None
+
+
+// convert an Option into a List
+let listOfOption opt =
+    match opt with
+    | Some x -> [ x ]
+    | None -> []
+
+let createEvents: CreateEvents =
+    fun pricedOrder acknowledgmentEventOpt ->
+        let events1 = pricedOrder |> PlaceOrderEvent.OrderPlaced |> List.singleton
+
+        let events2 =
+            acknowledgmentEventOpt
+            |> Option.map PlaceOrderEvent.AcknowledgmentSent
+            |> listOfOption
+
+        let events3 =
+            pricedOrder
+            |> createBillingEvent
+            |> Option.map PlaceOrderEvent.BillableOrderPlaced
+            |> listOfOption
+
+        [ yield! events1; yield! events2; yield! events3 ]

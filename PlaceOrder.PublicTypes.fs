@@ -87,4 +87,5 @@ type PlaceOrderEvent =
 // Failure output of PlaceOrder workflow
 type PlaceOrderError = ValidationError of ValidationError list
 
-type PlaceOrderWorkflow = PlaceOrderCommand -> AsyncResult<PlaceOrderEvent list, PlaceOrderError>
+// type PlaceOrderWorkflow = PlaceOrderCommand -> AsyncResult<PlaceOrderEvent list, PlaceOrderError>
+type PlaceOrderWorkflow = UnvalidatedOrder -> PlaceOrderEvent list // without effects

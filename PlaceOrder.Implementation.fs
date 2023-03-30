@@ -68,7 +68,7 @@ type SendResult =
 // type SendOrderAknowledgement = OrderAcknowledgement -> Async<SendResult>
 type SendOrderAknowledgement = OrderAcknowledgement -> SendResult // without effects for now
 
-type AcknowledgmentOrder =
+type AcknowledgeOrder =
     CreateOrderAcknowledgementLetter // dependency
         -> SendOrderAknowledgement // dependency
         -> PricedOrder // input
@@ -191,7 +191,7 @@ let priceOrder: PriceOrder =
 // ---------------------------------
 //  Send acknowledgement
 // ---------------------------------
-let acknowledgmentOrder: AcknowledgmentOrder =
+let acknowledgeOrder: AcknowledgeOrder =
     fun createAcknowledgementLetter sendAknowledgement pricedOrder ->
         let letter = createAcknowledgementLetter pricedOrder
 
@@ -247,3 +247,43 @@ let createEvents: CreateEvents =
             |> listOfOption
 
         [ yield! events1; yield! events2; yield! events3 ]
+
+
+// -----------------------------------------------------------------
+// Composing the pipeline steps together
+// -----------------------------------------------------------------
+
+//-------------------
+// dummy dependencies
+//-------------------
+let internal checkProductCodeExists: CheckProductCodeExists =
+    fun productCode -> true
+
+let internal checkAddressExists: CheckAddressExists =
+    fun unvalidatedAddress -> CheckedAddress unvalidatedAddress
+
+let internal getProductPrice: GetProductPrice = fun productCode -> Price.create 1M
+
+let internal createAcknowledgementLetter: CreateOrderAcknowledgementLetter =
+    fun pricedOrder -> HtmlString "Some text"
+
+let internal sendAcknowledgement: SendOrderAknowledgement =
+    fun acknowledgement -> Sent
+
+let placeOrder: PlaceOrderWorkflow =
+    let validateOrder = validateOrder checkProductCodeExists checkAddressExists
+    let priceOrder = priceOrder getProductPrice
+
+    let acknowledgeOrder =
+        acknowledgeOrder createAcknowledgementLetter sendAcknowledgement
+
+    fun unvalidatedOrder ->
+        let pricedOrder = unvalidatedOrder |> validateOrder |> priceOrder
+        pricedOrder |> acknowledgeOrder |> createEvents pricedOrder
+
+// WANT: complete pipeline like this
+// unvalidatedOrder
+// |> validateOrder
+// |> priceOrder
+// |> acknowledgeOrder
+// |> createEvents

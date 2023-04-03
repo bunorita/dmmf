@@ -128,11 +128,14 @@ let toOrderQuantity (productCode: ProductCode) (qty: decimal) : OrderQuantity =
     | Widget _ -> qty |> int |> UnitQuantity.create |> OrderQuantity.Unit
     | Gizmo _ -> qty * 1.0m<kg> |> KilogramQuantity.create |> OrderQuantity.Kilogram
 
-let toValidatedOrderLine checkProductCodeExists (unvalidatedOrderLine: UnvalidatedOrderLine) =
+let toValidatedOrderLine
+    checkProductCodeExists // dependency for toProductCode
+    (unvalidatedOrderLine: UnvalidatedOrderLine)
+    =
     let orderLineId = unvalidatedOrderLine.OrderLineId |> OrderLineId.create
 
     let productCode =
-        unvalidatedOrderLine.ProductCode |> toProductCode checkProductCodeExists
+        unvalidatedOrderLine.ProductCode |> toProductCode checkProductCodeExists // use service
 
     let quantity = unvalidatedOrderLine.Quantity |> toOrderQuantity productCode
 
@@ -142,7 +145,10 @@ let toValidatedOrderLine checkProductCodeExists (unvalidatedOrderLine: Unvalidat
 
 
 let validateOrder: ValidateOrder =
-    fun checkProductCodeExists checkAddressExists unvalidatedOrder ->
+    fun
+        checkProductCodeExists // dependency for toValidatedOrderLine
+        checkAddressExists // dependency for toAddress
+        unvalidatedOrder ->
         let orderId = unvalidatedOrder.OrderId |> OrderId.create
         let customerInfo = unvalidatedOrder.CustomerInfo |> toCustomerInfo
         let shippingAddr = unvalidatedOrder.ShippingAddress |> toAddress checkAddressExists
@@ -252,25 +258,13 @@ let createEvents: CreateEvents =
 // -----------------------------------------------------------------
 // Composing the pipeline steps together
 // -----------------------------------------------------------------
-
-//-------------------
-// dummy dependencies
-//-------------------
-let internal checkProductCodeExists: CheckProductCodeExists =
-    fun productCode -> true
-
-let internal checkAddressExists: CheckAddressExists =
-    fun unvalidatedAddress -> CheckedAddress unvalidatedAddress
-
-let internal getProductPrice: GetProductPrice = fun productCode -> Price.create 1M
-
-let internal createAcknowledgementLetter: CreateOrderAcknowledgementLetter =
-    fun pricedOrder -> HtmlString "Some text"
-
-let internal sendAcknowledgement: SendOrderAknowledgement =
-    fun acknowledgement -> Sent
-
-let placeOrder: PlaceOrderWorkflow =
+let placeOrder
+    checkProductCodeExists // dependency
+    checkAddressExists // dependency
+    getProductPrice // dependency
+    createAcknowledgementLetter // dependency
+    sendAcknowledgement // dependency
+    : PlaceOrderWorkflow = // function definition
     let validateOrder = validateOrder checkProductCodeExists checkAddressExists
     let priceOrder = priceOrder getProductPrice
 

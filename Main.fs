@@ -1,4 +1,5 @@
-﻿open OrderTaking.PlaceOrder
+﻿open OrderTaking.Common
+open OrderTaking.PlaceOrder
 open OrderTaking.PlaceOrder.Implementation
 
 [<EntryPoint>]
@@ -26,23 +27,31 @@ let main argv =
                 ProductCode = "W1234"
                 Quantity = 1.0M } ] }
 
+    // setup (dummy) services used by the workflow
+    let checkProductCodeExists: CheckProductCodeExists = fun productCode -> true
+
+    let checkAddressExists: CheckAddressExists =
+        fun unvalidatedAddress -> CheckedAddress unvalidatedAddress
+
+    let getProductPrice: GetProductPrice = fun productCode -> Price.create 1M
+
+    let createAcknowledgementLetter: CreateOrderAcknowledgementLetter =
+        fun pricedOrder -> HtmlString "Some text"
+
+    let sendAcknowledgement: SendOrderAknowledgement = fun acknowledgement -> Sent
+
+    // partially apply the services to the workflow
+    let placeOrder =
+        placeOrder
+            checkProductCodeExists
+            checkAddressExists
+            getProductPrice
+            createAcknowledgementLetter
+            sendAcknowledgement
+
+    //  run the workflow
     let eventList = placeOrder unvalidatedOrder
+
     eventList |> List.iter (fun event -> printfn "event: %A" event)
     printfn "done."
     0
-// let fiveKilos = 5.0<kg>
-// let fiveMeters = 5.0<m>
-// let listOfWeights = [ fiveKilos; fiveMeters ]
-// printfn "%b" (fiveKilos = fiveMeters)
-
-
-// let result = UnitQuantity.create 100
-
-// match result with
-// | Error msg -> printfn "Failuer, message is %s" msg
-// | Ok uq ->
-//     printfn "Success value is %A" uq
-//     let innerValue = UnitQuantity.value uq
-//     printfn "innverValue is %i" innerValue
-
-// 0

@@ -54,4 +54,5 @@ let main argv =
 
     eventList |> List.iter (fun event -> printfn "event: %A" event)
     printfn "done."
+
     0

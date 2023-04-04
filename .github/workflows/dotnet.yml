@@ -17,8 +17,14 @@ jobs:
         with:
           dotnet-version: ${{ matrix.dotnet-version }}
       - name: Install dependencies
+        working-directory: ./OrderTaking
         run: dotnet restore
       - name: Build
+        working-directory: ./OrderTaking
         run: dotnet build --configuration Release --no-restore
+      - name: Install dependencies for test
+        working-directory: ./OrderTaking.Tests
+        run: dotnet restore
       - name: Test
+        working-directory: ./OrderTaking.Tests
         run: dotnet test --no-restore --verbosity normal

@@ -9,7 +9,6 @@
     <Compile Include="CommonTypes.fs" />
     <Compile Include="PlaceOrder.PublicTypes.fs" />
     <Compile Include="PlaceOrder.Implementation.fs" />
-    <Compile Include="Library.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
 

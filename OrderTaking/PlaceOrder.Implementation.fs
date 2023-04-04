@@ -1,4 +1,5 @@
-module internal OrderTaking.PlaceOrder.Implementation
+// module internal OrderTaking.PlaceOrder.Implementation
+module OrderTaking.PlaceOrder.Implementation
 
 open OrderTaking.Common
 

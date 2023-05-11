@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Result.fs" />
     <Compile Include="CommonTypes.fs" />
     <Compile Include="PlaceOrder.PublicTypes.fs" />
     <Compile Include="PlaceOrder.Implementation.fs" />

@@ -34,23 +34,26 @@ type ValidatedOrder =
       OrderLines: ValidatedOrderLine list }
 
 type ValidateOrder =
-    CheckProductCodeExists // dependency
-        -> CheckAddressExists // dependency
-        -> UnvalidatedOrder // input
+    // ignoring dependencies for now
+    // CheckProductCodeExists // dependency
+    //     -> CheckAddressExists // dependency
+    //     -> UnvalidatedOrder // input
+    UnvalidatedOrder // input
         // -> AsyncResult<ValidatedOrder, ValidationError list> // output
-        -> ValidatedOrder // output, without effects
+        // -> ValidatedOrder // output, without effects
+        -> Result<ValidatedOrder, ValidationError>
 
 // ---------------------------------
 //  Pricing step
 // ---------------------------------
 type GetProductPrice = ProductCode -> Price
-type PricingError = PricingError of string
 
 type PriceOrder =
-    GetProductPrice // dependency
-        -> ValidatedOrder // input
-        -> PricedOrder // output: without effects for now
-// -> Result<PricedOrder, PricingError> // output
+    // GetProductPrice // dependency
+    //     -> ValidatedOrder // input
+    ValidatedOrder
+        //  -> PricedOrder // output: without effects for now
+        -> Result<PricedOrder, PricingError> // output
 
 // ---------------------------------
 //  Send acknowledgement
@@ -70,17 +73,18 @@ type SendResult =
 type SendOrderAknowledgement = OrderAcknowledgement -> SendResult // without effects for now
 
 type AcknowledgeOrder =
-    CreateOrderAcknowledgementLetter // dependency
-        -> SendOrderAknowledgement // dependency
-        -> PricedOrder // input
-        -> OrderAcknowledgementSent option // output
+    // CreateOrderAcknowledgementLetter // dependency
+    //     -> SendOrderAknowledgement // dependency
+    //     -> PricedOrder // input
+    PricedOrder -> OrderAcknowledgementSent option // output
 
 // ---------------------------------
 //  Create events
 // ---------------------------------
 type CreateEvents =
-    PricedOrder // input
-        -> OrderAcknowledgementSent option // input (event from previous step)
+    // PricedOrder // input
+    //     -> OrderAcknowledgementSent option // input (event from previous step)
+    OrderAcknowledgementSent option // input (event from previous step)
         -> PlaceOrderEvent list //outputs
 
 
@@ -147,9 +151,17 @@ let toValidatedOrderLine
 
 let validateOrder: ValidateOrder =
     fun
-        checkProductCodeExists // dependency for toValidatedOrderLine
-        checkAddressExists // dependency for toAddress
+        // checkProductCodeExists // dependency for toValidatedOrderLine
+        // checkAddressExists // dependency for toAddress
         unvalidatedOrder ->
+
+        // dummy dependencies
+        let checkProductCodeExists: CheckProductCodeExists = fun productCode -> true
+
+        let checkAddressExists: CheckAddressExists =
+            fun unvalidatedAddress -> CheckedAddress unvalidatedAddress
+
+
         let orderId = unvalidatedOrder.OrderId |> OrderId.create
         let customerInfo = unvalidatedOrder.CustomerInfo |> toCustomerInfo
         let shippingAddr = unvalidatedOrder.ShippingAddress |> toAddress checkAddressExists
@@ -158,11 +170,14 @@ let validateOrder: ValidateOrder =
         let orderLines =
             unvalidatedOrder.Lines |> List.map (toValidatedOrderLine checkProductCodeExists)
 
-        { OrderId = orderId
-          CustomerInfo = customerInfo
-          ShippingAddress = shippingAddr
-          BillingAddress = billingAddr
-          OrderLines = orderLines }
+
+        Ok
+            { OrderId = orderId
+              CustomerInfo = customerInfo
+              ShippingAddress = shippingAddr
+              BillingAddress = billingAddr
+              OrderLines = orderLines }
+
 
 
 // ---------------------------------
@@ -180,33 +195,50 @@ let toPricedOrderLine getProductPrice (line: ValidatedOrderLine) : PricedOrderLi
 
 
 let priceOrder: PriceOrder =
-    fun getProductPrice validatedOrder ->
+    fun
+        // getProductPrice
+        validatedOrder ->
+
+        let getProductPrice: GetProductPrice = fun productCode -> Price.create 1M // dummy dependency
+
         let lines =
             validatedOrder.OrderLines |> List.map (toPricedOrderLine getProductPrice)
 
         let amountToBill =
             lines |> List.map (fun line -> line.LinePrice) |> BillingAmount.sumPrices
 
-        { OrderId = validatedOrder.OrderId
-          CustomerInfo = validatedOrder.CustomerInfo
-          ShippingAddress = validatedOrder.ShippingAddress
-          BillingAddress = validatedOrder.BillingAddress
-          OrderLines = lines
-          AmmountToBill = amountToBill }
+
+        Ok
+            { OrderId = validatedOrder.OrderId
+              CustomerInfo = validatedOrder.CustomerInfo
+              ShippingAddress = validatedOrder.ShippingAddress
+              BillingAddress = validatedOrder.BillingAddress
+              OrderLines = lines
+              AmmountToBill = amountToBill }
 
 
 // ---------------------------------
 //  Send acknowledgement
 // ---------------------------------
 let acknowledgeOrder: AcknowledgeOrder =
-    fun createAcknowledgementLetter sendAknowledgement pricedOrder ->
+    fun
+        // createAcknowledgementLetter
+        // sendAcknowledgement
+        pricedOrder ->
+
+        // dummy dependencies
+        let createAcknowledgementLetter: CreateOrderAcknowledgementLetter =
+            fun pricedOrder -> HtmlString "Some text"
+
+        let sendAcknowledgement: SendOrderAknowledgement = fun acknowledgement -> Sent
+
         let letter = createAcknowledgementLetter pricedOrder
 
         let acknowledge =
             { EmailAddress = pricedOrder.CustomerInfo.EmailAddress
               Letter = letter }
 
-        match sendAknowledgement acknowledge with
+        match sendAcknowledgement acknowledge with
         | Sent ->
             let event =
                 { OrderId = pricedOrder.OrderId
@@ -239,42 +271,61 @@ let listOfOption opt =
     | None -> []
 
 let createEvents: CreateEvents =
-    fun pricedOrder acknowledgmentEventOpt ->
-        let events1 = pricedOrder |> PlaceOrderEvent.OrderPlaced |> List.singleton
+    // fun pricedOrder acknowledgmentEventOpt ->
+    fun acknowledgmentEventOpt ->
+        // let events1 = pricedOrder |> PlaceOrderEvent.OrderPlaced |> List.singleton
 
         let events2 =
             acknowledgmentEventOpt
             |> Option.map PlaceOrderEvent.AcknowledgmentSent
             |> listOfOption
 
-        let events3 =
-            pricedOrder
-            |> createBillingEvent
-            |> Option.map PlaceOrderEvent.BillableOrderPlaced
-            |> listOfOption
+        // let events3 =
+        //     pricedOrder
+        //     |> createBillingEvent
+        //     |> Option.map PlaceOrderEvent.BillableOrderPlaced
+        //     |> listOfOption
 
-        [ yield! events1; yield! events2; yield! events3 ]
+        // [ yield! events1; yield! events2; yield! events3 ]
+        [ yield! events2 ]
+
 
 
 // -----------------------------------------------------------------
 // Composing the pipeline steps together
 // -----------------------------------------------------------------
-let placeOrder
-    checkProductCodeExists // dependency
-    checkAddressExists // dependency
-    getProductPrice // dependency
-    createAcknowledgementLetter // dependency
-    sendAcknowledgement // dependency
-    : PlaceOrderWorkflow = // function definition
-    let validateOrder = validateOrder checkProductCodeExists checkAddressExists
-    let priceOrder = priceOrder getProductPrice
+let placeOrder unvalidatedOrder =
 
-    let acknowledgeOrder =
-        acknowledgeOrder createAcknowledgementLetter sendAcknowledgement
+    let validateOrderAdapted input =
+        input |> validateOrder |> Result.mapError PlaceOrderError.Validation
 
-    fun unvalidatedOrder ->
-        let pricedOrder = unvalidatedOrder |> validateOrder |> priceOrder
-        pricedOrder |> acknowledgeOrder |> createEvents pricedOrder
+    let priceOrderAdapted input =
+        input |> priceOrder |> Result.mapError PlaceOrderError.Pricing
+
+    unvalidatedOrder
+    |> validateOrderAdapted
+    |> Result.bind priceOrderAdapted
+    |> Result.map acknowledgeOrder
+    |> Result.map createEvents
+
+
+// let placeOrder
+//     checkProductCodeExists // dependency
+//     checkAddressExists // dependency
+//     getProductPrice // dependency
+//     createAcknowledgementLetter // dependency
+//     sendAcknowledgement // dependency
+//     : PlaceOrderWorkflow = // function definition
+
+//     let validateOrder = validateOrder checkProductCodeExists checkAddressExists
+//     let priceOrder = priceOrder getProductPrice
+
+//     let acknowledgeOrder =
+//         acknowledgeOrder createAcknowledgementLetter sendAcknowledgement
+
+//     fun unvalidatedOrder ->
+//         let pricedOrder = unvalidatedOrder |> validateOrder |> priceOrder
+//         pricedOrder |> acknowledgeOrder |> createEvents pricedOrder
 
 // WANT: complete pipeline like this
 // unvalidatedOrder

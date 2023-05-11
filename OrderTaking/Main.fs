@@ -41,18 +41,22 @@ let main argv =
     let sendAcknowledgement: SendOrderAknowledgement = fun acknowledgement -> Sent
 
     // partially apply the services to the workflow
-    let placeOrder =
-        placeOrder
-            checkProductCodeExists
-            checkAddressExists
-            getProductPrice
-            createAcknowledgementLetter
-            sendAcknowledgement
+    // let placeOrder =
+    //     placeOrder
+    //         checkProductCodeExists
+    //         checkAddressExists
+    //         getProductPrice
+    //         createAcknowledgementLetter
+    //         sendAcknowledgement
 
     //  run the workflow
-    let eventList = placeOrder unvalidatedOrder
+    // let eventList = placeOrder unvalidatedOrder
+    // eventList |> List.iter (fun event -> printfn "event: %A" event)
 
-    eventList |> List.iter (fun event -> printfn "event: %A" event)
+    match placeOrder unvalidatedOrder with
+    | Ok eventList -> eventList |> List.iter (fun event -> printfn "event: %A" event)
+    | Error e -> printfn "error: %A\n" e
+
     printfn "done."
 
     0

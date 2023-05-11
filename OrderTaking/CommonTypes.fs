@@ -89,10 +89,6 @@ type CustomerInfo =
 
 type VerifiedEmailAddress = private VerifiedEmailAddress of string
 
-type ValidationError =
-    { FieldName: string
-      ErrorDescription: string }
-
 type QuoteForm = Undefined
 type OrderForm = Undefined
 

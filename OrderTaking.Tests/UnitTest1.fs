@@ -38,7 +38,8 @@ let ``If product exists, validation succeeds`` () =
 
     // act: call validateOrder
     let result =
-        validateOrder checkProductCodeExists checkAddressExists unvalidatedOrder
+        // validateOrder checkProductCodeExists checkAddressExists unvalidatedOrder
+        validateOrder unvalidatedOrder
 
     // assert: check that result is a validatedOrder, not an error
     printfn "result: ---\n%A" result
@@ -77,7 +78,7 @@ let ``If product doesn't exist, validation fails`` () =
     // and assert
     let f =
         fun () ->
-            validateOrder checkProductCodeExists checkAddressExists unvalidatedOrder
-            |> ignore
+            // validateOrder checkProductCodeExists checkAddressExists unvalidatedOrder
+            validateOrder unvalidatedOrder |> ignore
 
     Assert.Throws(f) |> ignore
